@@ -1,8 +1,33 @@
 # DocuGen CLI
 
+<div align="center">
+
 > 🤖 AI-Powered Code Documentation using Claude
 
+[![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-163%20passed-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-82%25-brightgreen.svg)](tests/)
+[![Code Style](https://img.shields.io/badge/code%20style-autopep8-blue.svg)](https://github.com/hhatto/autopep8)
+[![Powered by](https://img.shields.io/badge/powered%20by-Claude%20API-blueviolet.svg)](https://www.anthropic.com/)
+[![Built with](https://img.shields.io/badge/built%20with-Click-blue.svg)](https://click.palletsprojects.com/)
+[![Terminal UI](https://img.shields.io/badge/terminal%20UI-Rich-orange.svg)](https://rich.readthedocs.io/)
+
+</div>
+
+---
+
 A command-line tool that automatically generates high-quality documentation for SQL, Python, and R code files using Anthropic's Claude API. No more placeholder docs—DocuGen analyzes your code and creates accurate, standards-compliant documentation.
+
+<div align="center">
+
+### Supported Languages
+
+![SQL](https://img.shields.io/badge/SQL-Markdown-blue?logo=postgresql&logoColor=white)
+![Python](https://img.shields.io/badge/Python-NumPy-yellow?logo=python&logoColor=white)
+![R](https://img.shields.io/badge/R-Roxygen2-lightblue?logo=r&logoColor=white)
+
+</div>
 
 ## ✨ Features
 
@@ -52,20 +77,22 @@ python -m docugen.cli code.r --suffix "_documented"
 
 ## 📖 Usage Examples
 
-### Basic Usage
+### ✨ See the Magic in Action
 
-```bash
-# Undocumented Python file → Fully documented
-python -m docugen.cli my_script.py
-```
+<table>
+<tr>
+<td width="50%">
 
-**Input:**
+**Before** 😞
 ```python
 def calculate_average(numbers):
     return sum(numbers) / len(numbers) if numbers else 0
 ```
 
-**Output:** `my_script__cli_dcreate_modified.py`
+</td>
+<td width="50%">
+
+**After** ✨
 ```python
 def calculate_average(numbers):
     """
@@ -88,6 +115,19 @@ def calculate_average(numbers):
     """
     return sum(numbers) / len(numbers) if numbers else 0
 ```
+
+</td>
+</tr>
+</table>
+
+### Basic Usage
+
+```bash
+# Document a single file
+python -m docugen.cli my_script.py
+```
+
+Output file: `my_script__cli_dcreate_modified.py` with AI-generated docs! 🎉
 
 ### Batch Processing
 
