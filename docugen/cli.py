@@ -97,9 +97,14 @@ def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: st
         validator = DocValidator()
         writer = FileWriter()
 
+        # Get custom prompt if configured
+        custom_prompt = config_mgr.get_custom_prompt()
+        if custom_prompt and verbose:
+            console.print("[dim]Using custom prompt instructions[/dim]")
+
         # Initialize generator with API key check
         try:
-            generator = DocGenerator(api_key=api_key)
+            generator = DocGenerator(api_key=api_key, custom_prompt_suffix=custom_prompt)
             if verbose:
                 console.print("[dim]✓ Claude API connected[/dim]")
         except APIKeyMissingError as e:

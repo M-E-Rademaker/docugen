@@ -45,7 +45,7 @@ class DocGenerator:
     >>> docs = generator.generate(Path("script.py"), code_content)
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, custom_prompt_suffix: Optional[str] = None):
         """
         Initialize generator with Claude API.
 
@@ -53,6 +53,8 @@ class DocGenerator:
         ----------
         api_key : str, optional
             Anthropic API key. If None, reads from ANTHROPIC_API_KEY env var.
+        custom_prompt_suffix : str, optional
+            Additional instructions to append to all prompts.
 
         Raises
         ------
@@ -60,6 +62,7 @@ class DocGenerator:
             If no API key is available.
         """
         self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+        self.custom_prompt_suffix = custom_prompt_suffix
 
         if not self.api_key:
             raise APIKeyMissingError(
@@ -597,6 +600,10 @@ Return ONLY the Roxygen2 comments (starting with #'), ready to be inserted direc
 
         prompt = prompt_template.format(code=code_content)
 
+        # Append custom prompt suffix if configured
+        if self.custom_prompt_suffix:
+            prompt += f"\n\n---\nADDITIONAL INSTRUCTIONS:\n{self.custom_prompt_suffix}"
+
         try:
             with Progress(
                 SpinnerColumn(),
@@ -715,6 +722,10 @@ INSTRUCTIONS:
 6. Make sure examples are realistic and correct
 
 Return ONLY the corrected documentation, properly formatted and ready to use."""
+
+        # Append custom prompt suffix if configured
+        if self.custom_prompt_suffix:
+            update_prompt += f"\n\n---\nADDITIONAL INSTRUCTIONS:\n{self.custom_prompt_suffix}"
 
         try:
             with Progress(

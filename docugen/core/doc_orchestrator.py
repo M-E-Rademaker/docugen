@@ -171,12 +171,14 @@ class DocOrchestrator:
                 try:
                     ast.parse(modified_content)
                 except SyntaxError as e:
+                    # Save the corrupted content for investigation
+                    error_path = self._save_error_file(file_path, modified_content)
                     return {
                         'success': False,
                         'items_processed': len(items),
                         'items_documented': 0,
                         'items_skipped': items_skipped,
-                        'error': f'Documentation injection corrupted Python syntax: {e}'
+                        'error': f'Documentation injection corrupted Python syntax: {e}\nCorrupted file saved to: {error_path}'
                     }
 
             # Write back to file
@@ -192,12 +194,24 @@ class DocOrchestrator:
             }
 
         except Exception as e:
+            # Save the current state if we have modified content
+            error_path = None
+            try:
+                if 'modified_content' in locals():
+                    error_path = self._save_error_file(file_path, modified_content)
+            except:
+                pass  # Don't let error saving fail the error reporting
+
+            error_msg = str(e)
+            if error_path:
+                error_msg += f'\nPartial/errored file saved to: {error_path}'
+
             return {
                 'success': False,
                 'items_processed': 0,
                 'items_documented': 0,
                 'items_skipped': 0,
-                'error': str(e)
+                'error': error_msg
             }
 
     def _inject_multiple_docs(self, content: str, documented_items: List[Dict[str, Any]],
@@ -298,3 +312,27 @@ class DocOrchestrator:
                 lines.insert(insert_line, line)
 
         return '\n'.join(lines)
+
+    def _save_error_file(self, original_path: Path, content: str) -> Path:
+        """
+        Save corrupted/errored content to a file for investigation.
+
+        Parameters
+        ----------
+        original_path : Path
+            Original file path
+        content : str
+            Content that caused the error
+
+        Returns
+        -------
+        Path
+            Path to the saved error file
+        """
+        # Create error filename: original_name__errored.ext
+        error_path = original_path.parent / f"{original_path.stem}__errored{original_path.suffix}"
+
+        # Write the error file
+        error_path.write_text(content, encoding='utf-8')
+
+        return error_path

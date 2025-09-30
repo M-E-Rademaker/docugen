@@ -95,6 +95,55 @@ class ConfigManager:
         """
         return self.get_api_key() is not None
 
+    def get_custom_prompt(self) -> Optional[str]:
+        """
+        Get custom prompt suffix from config file.
+
+        Returns
+        -------
+        Optional[str]
+            Custom prompt suffix if configured, None otherwise
+        """
+        if self.config_file.exists():
+            try:
+                with open(self.config_file, 'r') as f:
+                    config = json.load(f)
+                    return config.get('custom_prompt_suffix')
+            except (json.JSONDecodeError, IOError):
+                return None
+
+        return None
+
+    def set_custom_prompt(self, custom_prompt: str):
+        """
+        Save custom prompt suffix to config file.
+
+        Parameters
+        ----------
+        custom_prompt : str
+            Custom prompt text to append to all documentation prompts
+        """
+        config = {}
+
+        # Load existing config if it exists
+        if self.config_file.exists():
+            try:
+                with open(self.config_file, 'r') as f:
+                    config = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+
+        # Update custom prompt
+        config['custom_prompt_suffix'] = custom_prompt
+
+        # Save config
+        with open(self.config_file, 'w') as f:
+            json.dump(config, f, indent=2)
+
+        # Set restrictive permissions (owner only)
+        if os.name != 'nt':  # Unix-like systems
+            os.chmod(self.config_file, 0o600)
+
     def prompt_for_api_key(self) -> str:
         """
         Prompt user to enter their API key interactively.
