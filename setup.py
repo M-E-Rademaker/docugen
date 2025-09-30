@@ -1,3 +1,4 @@
+import os
 from setuptools import setup, find_packages
 
 setup(
@@ -29,7 +30,7 @@ setup(
     author="Your Name",
     author_email="your.email@example.com",
     description="CLI tool for automated code documentation",
-    long_description=open("README.md").read(),
+    long_description=open("README.md", encoding="utf-8").read() if os.path.exists("README.md") else "",
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/docugen",
     classifiers=[
