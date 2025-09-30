@@ -84,6 +84,7 @@ jobs:
       - name: Install NSIS
         run: |
           choco install nsis -y
+          refreshenv
 
       - name: Create placeholder files for NSIS
         run: |
@@ -93,7 +94,7 @@ jobs:
 
       - name: Build NSIS installer
         run: |
-          makensis installers/windows/installer.nsi
+          & "C:\Program Files (x86)\NSIS\makensis.exe" installers/windows/installer.nsi
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
