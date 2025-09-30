@@ -1,0 +1,266 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build-binaries:
+    name: Build ${{ matrix.os }} Binary
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            binary_name: docugen
+            artifact_name: docugen-linux
+          - os: windows-latest
+            binary_name: docugen.exe
+            artifact_name: docugen-windows.exe
+          - os: macos-latest
+            binary_name: docugen
+            artifact_name: docugen-macos
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller docugen.spec
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mv dist/${{ matrix.binary_name }} dist/${{ matrix.artifact_name }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          move dist\${{ matrix.binary_name }} dist\${{ matrix.artifact_name }}
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact_name }}
+
+  build-windows-installer:
+    name: Build Windows Installer
+    runs-on: windows-latest
+    needs: build-binaries
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: docugen-windows.exe
+          path: dist/
+
+      - name: Rename binary back to docugen.exe
+        run: move dist\docugen-windows.exe dist\docugen.exe
+
+      - name: Install NSIS
+        run: |
+          choco install nsis -y
+
+      - name: Create placeholder files for NSIS
+        run: |
+          echo "" > installers/windows/docugen.ico
+          echo "" > installers/windows/header.bmp
+          echo "" > installers/windows/welcome.bmp
+
+      - name: Build NSIS installer
+        run: |
+          makensis installers/windows/installer.nsi
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docugen-windows-installer
+          path: installers/windows/DocuGen-Setup-*.exe
+
+  build-macos-installer:
+    name: Build macOS Installer
+    runs-on: macos-latest
+    needs: build-binaries
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download macOS binary
+        uses: actions/download-artifact@v4
+        with:
+          name: docugen-macos
+          path: dist/
+
+      - name: Rename binary back to docugen
+        run: mv dist/docugen-macos dist/docugen
+
+      - name: Make binary executable
+        run: chmod +x dist/docugen
+
+      - name: Build macOS package
+        run: |
+          chmod +x installers/macos/build-pkg.sh
+          cd installers/macos
+          ./build-pkg.sh
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docugen-macos-installer
+          path: installers/macos/DocuGen-*.pkg
+
+  build-linux-installer:
+    name: Build Linux Installers
+    runs-on: ubuntu-latest
+    needs: build-binaries
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: docugen-linux
+          path: dist/
+
+      - name: Rename binary back to docugen
+        run: mv dist/docugen-linux dist/docugen
+
+      - name: Make binary executable
+        run: chmod +x dist/docugen
+
+      - name: Build Debian package
+        run: |
+          chmod +x installers/linux/build-deb.sh
+          cd installers/linux
+          ./build-deb.sh
+
+      - name: Create standalone installer package
+        run: |
+          mkdir -p dist/docugen-linux-installer
+          cp dist/docugen dist/docugen-linux-installer/
+          cp installers/linux/install.sh dist/docugen-linux-installer/
+          chmod +x dist/docugen-linux-installer/install.sh
+          cd dist
+          tar -czf docugen-linux-installer.tar.gz docugen-linux-installer/
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: docugen-debian-package
+          path: installers/linux/docugen_*.deb
+
+      - name: Upload Linux installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: docugen-linux-installer
+          path: dist/docugen-linux-installer.tar.gz
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-windows-installer, build-macos-installer, build-linux-installer]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts/
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: DocuGen v${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: false
+          body: |
+            # DocuGen v${{ steps.get_version.outputs.version }}
+
+            AI-Powered Code Documentation Tool
+
+            ## Installation
+
+            ### Windows
+            Download and run `DocuGen-Setup.exe`
+
+            ### macOS
+            Download and double-click `DocuGen.pkg`
+
+            ### Linux (Debian/Ubuntu)
+            ```bash
+            sudo dpkg -i docugen_${{ steps.get_version.outputs.version }}_amd64.deb
+            ```
+
+            ### Linux (Universal)
+            ```bash
+            tar -xzf docugen-linux-installer.tar.gz
+            cd docugen-linux-installer
+            ./install.sh
+            ```
+
+            ## What's New
+            - In-file documentation injection
+            - Support for SQL, Python, and R
+            - Multiple detail levels (minimal, concise, verbose)
+            - Automated API key setup during installation
+
+            ## Usage
+            ```bash
+            docugen <file-or-directory> [options]
+            ```
+
+            For more information, see the [README](https://github.com/${{ github.repository }}/blob/main/README.md).
+          files: |
+            artifacts/docugen-windows-installer/*.exe
+            artifacts/docugen-macos-installer/*.pkg
+            artifacts/docugen-debian-package/*.deb
+            artifacts/docugen-linux-installer/*.tar.gz
+            artifacts/docugen-linux/docugen-linux
+            artifacts/docugen-windows.exe/docugen-windows.exe
+            artifacts/docugen-macos/docugen-macos
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

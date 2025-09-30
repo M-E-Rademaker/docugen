@@ -41,38 +41,59 @@ A command-line tool that automatically generates high-quality documentation for 
 
 ## 🚀 Quick Start
 
-### 1. Installation
+### Installation
 
+Choose your platform and download the installer:
+
+#### Windows
+1. Download `DocuGen-Setup.exe` from [Releases](https://github.com/yourusername/docugen/releases)
+2. Double-click to run the installer
+3. Follow the setup wizard (includes API key configuration)
+4. Done! Open any command prompt and type `docugen`
+
+#### macOS
+1. Download `DocuGen.pkg` from [Releases](https://github.com/yourusername/docugen/releases)
+2. Double-click to install
+3. Follow the installation prompts
+4. Restart your terminal
+5. Type `docugen` to start
+
+#### Linux (Debian/Ubuntu)
 ```bash
-# Clone or navigate to the project
-cd docugen
-
-# Install in development mode
-pip install -e .
+# Download and install the .deb package
+wget https://github.com/yourusername/docugen/releases/latest/download/docugen_1.0.0_amd64.deb
+sudo dpkg -i docugen_1.0.0_amd64.deb
 ```
 
-### 2. Set Your API Key
+#### Linux (Other Distributions)
+```bash
+# Download the universal installer
+wget https://github.com/yourusername/docugen/releases/latest/download/docugen-linux-installer.tar.gz
+tar -xzf docugen-linux-installer.tar.gz
+cd docugen-linux-installer
+./install.sh
+```
+
+### First Run
+
+When you first run `docugen`, you'll be prompted to enter your Anthropic API key if you didn't configure it during installation.
 
 Get your API key from [Anthropic Console](https://console.anthropic.com/)
 
-```bash
-export ANTHROPIC_API_KEY='your-api-key-here'
-```
-
-### 3. Run DocuGen
+### Usage
 
 ```bash
 # Document a single file
-python -m docugen.cli script.py
+docugen script.py
 
-# Document a directory (verbose mode)
-python -m docugen.cli src/ --verbose
+# Document a directory
+docugen src/ --verbose
 
 # Dry run (see what would be done)
-python -m docugen.cli query.sql --dry-run
+docugen query.sql --dry-run
 
-# Custom output suffix
-python -m docugen.cli code.r --suffix "_documented"
+# Choose detail level
+docugen code.py --detail-level verbose
 ```
 
 ## 📖 Usage Examples
@@ -124,36 +145,42 @@ def calculate_average(numbers):
 
 ```bash
 # Document a single file
-python -m docugen.cli my_script.py
+docugen my_script.py
 ```
 
-Output file: `my_script__cli_dcreate_modified.py` with AI-generated docs! 🎉
+Documentation is injected directly into the original file! 🎉
 
 ### Batch Processing
 
 ```bash
 # Document all files in a directory
-python -m docugen.cli ./src --verbose
+docugen ./src --verbose
 ```
 
 ### Options
 
 ```bash
-python -m docugen.cli --help
+docugen --help
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--suffix TEXT` | Output filename suffix (default: `__cli_dcreate_modified`) |
+| `--detail-level`, `-d` | Documentation detail level: `minimal`, `concise`, or `verbose` (default: concise) |
 | `--dry-run` | Preview what would be done without making changes |
 | `-v, --verbose` | Show detailed progress information |
-| `--api-key TEXT` | Provide API key directly (alternative to env var) |
+| `--api-key TEXT` | Provide API key directly (overrides config and environment) |
 
 ## 📋 Requirements
 
-- **Python 3.11.0+**
+### For Users (Pre-built Installers)
+- **No Python installation required!** ✨
 - **Anthropic API Key** ([Get one here](https://console.anthropic.com/))
+- Windows 10+, macOS 10.15+, or any modern Linux distribution
+
+### For Developers
+- **Python 3.11.0+**
 - **Dependencies:** `click`, `anthropic`, `rich`, `pyyaml`
+- **Build tools:** `pyinstaller` (for building standalone executables)
 
 ## 📚 Documentation Standards
 
@@ -218,6 +245,10 @@ result
 ### Setup Development Environment
 
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/docugen.git
+cd docugen
+
 # Create virtual environment
 python3.11 -m venv venv
 source venv/bin/activate  # Linux/Mac
@@ -226,6 +257,39 @@ venv\Scripts\activate     # Windows
 
 # Install with dev dependencies
 pip install -e ".[dev]"
+```
+
+### Building Standalone Executables
+
+```bash
+# Install PyInstaller
+pip install pyinstaller
+
+# Build for your platform
+pyinstaller docugen.spec
+
+# Binary will be in dist/docugen (or dist/docugen.exe on Windows)
+```
+
+### Building Platform Installers
+
+#### Windows Installer (NSIS)
+```bash
+# Install NSIS from https://nsis.sourceforge.io/
+# Then run:
+makensis installers/windows/installer.nsi
+```
+
+#### macOS Package
+```bash
+cd installers/macos
+./build-pkg.sh
+```
+
+#### Linux Debian Package
+```bash
+cd installers/linux
+./build-deb.sh
 ```
 
 ### Run Tests
@@ -287,16 +351,34 @@ See [docs/architecture.md](docs/architecture.md) for detailed design.
 ## ⚠️ Important Notes
 
 - **API Costs**: Each file processed makes a Claude API call. Monitor usage in [Anthropic Console](https://console.anthropic.com/)
-- **Originals Preserved**: Original files are never modified. New files have suffix added
+- **In-File Documentation**: Documentation is injected directly into your source files. Consider using version control (git) before processing
 - **Network Required**: Requires internet connection for Claude API
 - **Rate Limits**: Respects Anthropic API rate limits
+- **No Dependencies**: Pre-built installers require no Python or dependencies—just install and use!
 
 ## 🐛 Troubleshooting
 
 ### "API Key Required" Error
 
+If you didn't configure your API key during installation:
+
+**Option 1: Interactive setup**
+```bash
+# Just run docugen and follow the prompts
+docugen
+```
+
+**Option 2: Environment variable**
 ```bash
 export ANTHROPIC_API_KEY='your-api-key-here'
+```
+
+**Option 3: Manual config file**
+Create `~/.docugen/config.json` (Linux/macOS) or `%APPDATA%\DocuGen\config.json` (Windows):
+```json
+{
+  "anthropic_api_key": "your-api-key-here"
+}
 ```
 
 ### "No supported files found"

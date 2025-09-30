@@ -14,6 +14,7 @@ from docugen.core.doc_validator import DocValidator
 from docugen.core.doc_generator import DocGenerator, APIKeyMissingError, DocGeneratorError
 from docugen.core.file_writer import FileWriter
 from docugen.utils.config import DetailLevel
+from docugen.utils.config_manager import ConfigManager
 
 console = Console()
 
@@ -34,8 +35,8 @@ writer = None
               help='Show what would be done without making changes')
 @click.option('--verbose', '-v', is_flag=True,
               help='Verbose output')
-@click.option('--api-key', envvar='ANTHROPIC_API_KEY',
-              help='Anthropic API key (or set ANTHROPIC_API_KEY env var)')
+@click.option('--api-key',
+              help='Anthropic API key (overrides config and environment)')
 def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: str):
     """
     Document SQL, Python, and R code files using AI.
@@ -72,6 +73,19 @@ def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: st
     console.print()
 
     try:
+        # Initialize config manager
+        config_mgr = ConfigManager()
+
+        # Get API key from: CLI arg > config file > environment > interactive prompt
+        if not api_key:
+            api_key = config_mgr.get_api_key()
+
+        if not api_key:
+            # First-run interactive setup
+            if not config_mgr.setup_interactive():
+                sys.exit(1)
+            api_key = config_mgr.get_api_key()
+
         # Initialize components
         if verbose:
             console.print("[dim]Initializing components...[/dim]")
@@ -86,11 +100,8 @@ def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: st
             if verbose:
                 console.print("[dim]✓ Claude API connected[/dim]")
         except APIKeyMissingError as e:
-            console.print(f"\n[bold red]API Key Required[/bold red]")
+            console.print(f"\n[bold red]API Key Error[/bold red]")
             console.print(f"\n{str(e)}")
-            console.print("\n[yellow]Set your API key:[/yellow]")
-            console.print("  export ANTHROPIC_API_KEY='your-api-key-here'")
-            console.print("\n[dim]Get your API key at: https://console.anthropic.com/[/dim]")
             sys.exit(1)
 
         # Phase 1: Discover files
