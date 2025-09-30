@@ -132,11 +132,6 @@ Section "Install"
         FileOpen $0 "$APPDATA\DocuGen\config.json" w
         FileWrite $0 '{"anthropic_api_key": "$APIKeyValue"}'
         FileClose $0
-
-        ; Set restrictive permissions
-        AccessControl::SetFileOwner "$APPDATA\DocuGen\config.json" "$USERNAME"
-        AccessControl::ClearOnFile "$APPDATA\DocuGen\config.json" "(BU)" "FullAccess"
-        AccessControl::GrantOnFile "$APPDATA\DocuGen\config.json" "$USERNAME" "FullAccess"
     ${EndIf}
 
     ; Create start menu shortcut
