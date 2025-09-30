@@ -1,0 +1,62 @@
+# DocuGen Agent Configurations
+
+agents:
+  doc-generator-agent:
+    description: |
+      Specialized agent for implementing LLM-based documentation generation.
+      Handles Claude API integration, prompt engineering for different languages,
+      and ensuring generated docs match language-specific standards.
+    responsibilities:
+      - Implement doc_generator.py with Anthropic API integration
+      - Create language-specific prompts (SQL, Python, R)
+      - Handle API errors and rate limiting
+      - Optimize prompts for quality documentation
+    tools:
+      - Read
+      - Write
+      - Edit
+      - WebFetch
+      - Bash
+    context_files:
+      - docugen/core/doc_generator.py
+      - docugen/standards/*.py
+      - docugen/templates/*.txt
+      - docugen/templates/*.md
+
+  testing-agent:
+    description: |
+      Specialized agent for comprehensive cross-platform testing.
+      Ensures compatibility with both PowerShell and Bash environments.
+    responsibilities:
+      - Write unit tests for all core modules
+      - Create integration tests for full pipeline
+      - Test cross-platform compatibility (Windows/Linux)
+      - Add fixture files for testing
+    tools:
+      - Read
+      - Write
+      - Edit
+      - Bash
+    context_files:
+      - tests/**/*.py
+      - tests/fixtures/*
+      - docugen/core/*.py
+
+  standards-validator-agent:
+    description: |
+      Specialized agent for implementing documentation validation logic.
+      Ensures generated docs comply with language standards.
+    responsibilities:
+      - Implement doc_parser.py to extract existing docs
+      - Implement doc_validator.py to check compliance
+      - Define validation rules for SQL/Python/R standards
+      - Handle edge cases in documentation formats
+    tools:
+      - Read
+      - Write
+      - Edit
+      - Grep
+    context_files:
+      - docugen/core/doc_parser.py
+      - docugen/core/doc_validator.py
+      - docugen/standards/*.py

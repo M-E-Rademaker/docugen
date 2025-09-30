@@ -1,0 +1,9 @@
+#' {title}
+#'
+#' {description}
+#'
+#' @param {param_name} {param_description}
+#' @return {return_description}
+#' @examples
+#' {examples}
+#' @export

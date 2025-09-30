@@ -1,0 +1,17 @@
+"""
+{short_description}
+
+{long_description}
+
+Parameters
+----------
+{parameters}
+
+Returns
+-------
+{returns}
+
+Examples
+--------
+{examples}
+"""
