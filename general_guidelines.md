@@ -1,5 +1,31 @@
 # General Guidelines
 
+- version controll the whole project using git
+- use a virtual environment when developing
+- use consistent code style (i guess autopep8 but up to you)
+
+## Why
+- Problem statement
+  Code documentation is a notoriously neglected topic in code development.
+- Business case or need
+  Missing code documentation can make code maintance harder or even impossible. This is particulary problematic for business critical code in smaller business where 
+  the number of people familiar with the code is typically very small or even just one. 
+- Benefits and value proposition
+  A CLI tool is code and can thus be seamlessly integrated in code development pipelines. This makes code documentation creation fully automatic and reduces the documentation
+  process to post-controll and 
+
+## Tools/Libraries to Use
+<!-- Specify approved tools and libraries for the project -->
+- Development tools:
+    Use Python version 3.11.0 to write the CLI tool. Use the argparse liberary to provide the python file as a CLI. Use the venv package to create the a virtual environment for development
+    All Python packages must be written in a requirements.txt and installed in the virtual environment.
+- Testing frameworks:
+    The testing system should be decided by the agent based on the projects structure and content. Make sure to always ensure that both PowerShell and bash are supported.
+- IDE/Editor recommendations:
+    Use VSCode as the IDE. 
+
+
+
 ## Tools/Libraries to Use
 <!-- Specify approved tools and libraries for the project -->
 - Development tools:

@@ -13,6 +13,7 @@ from docugen.core.doc_parser import DocParser
 from docugen.core.doc_validator import DocValidator
 from docugen.core.doc_generator import DocGenerator, APIKeyMissingError, DocGeneratorError
 from docugen.core.file_writer import FileWriter
+from docugen.utils.config import DetailLevel
 
 console = Console()
 
@@ -25,17 +26,21 @@ writer = None
 
 @click.command()
 @click.argument('path', type=click.Path(exists=True))
-@click.option('--suffix', default='__cli_dcreate_modified',
-              help='Suffix for modified files')
+@click.option('--detail-level', '-d',
+              type=click.Choice(['minimal', 'concise', 'verbose'], case_sensitive=False),
+              default='concise',
+              help='Documentation detail level (minimal/concise/verbose)')
 @click.option('--dry-run', is_flag=True,
               help='Show what would be done without making changes')
 @click.option('--verbose', '-v', is_flag=True,
               help='Verbose output')
 @click.option('--api-key', envvar='ANTHROPIC_API_KEY',
               help='Anthropic API key (or set ANTHROPIC_API_KEY env var)')
-def main(path: str, suffix: str, dry_run: bool, verbose: bool, api_key: str):
+def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: str):
     """
     Document SQL, Python, and R code files using AI.
+
+    Documentation is injected directly into the source files.
 
     PATH: File or directory to document
 
@@ -44,7 +49,8 @@ def main(path: str, suffix: str, dry_run: bool, verbose: bool, api_key: str):
       docugen script.py
       docugen src/ --verbose
       docugen query.sql --dry-run
-      docugen code.r --suffix "_documented"
+      docugen code.py --detail-level verbose
+      docugen analysis.r -d minimal
 
     \b
     Requirements:
@@ -53,12 +59,16 @@ def main(path: str, suffix: str, dry_run: bool, verbose: bool, api_key: str):
     """
     global parser, validator, generator, writer
 
+    # Convert detail_level string to enum
+    detail_level_enum = DetailLevel(detail_level.lower())
+
     # Header
     console.print(Panel.fit(
         "[bold blue]DocuGen CLI v0.1.0[/bold blue]\n"
         "AI-Powered Code Documentation",
         border_style="blue"
     ))
+    console.print(f"[dim]Detail Level: {detail_level.capitalize()}[/dim]")
     console.print()
 
     try:
@@ -99,7 +109,7 @@ def main(path: str, suffix: str, dry_run: bool, verbose: bool, api_key: str):
 
         for file_path in files:
             try:
-                process_file(file_path, suffix, dry_run, verbose)
+                process_file(file_path, detail_level_enum, dry_run, verbose)
                 success_count += 1
             except Exception as e:
                 error_count += 1
@@ -132,7 +142,7 @@ def main(path: str, suffix: str, dry_run: bool, verbose: bool, api_key: str):
         sys.exit(1)
 
 
-def process_file(file_path: Path, suffix: str, dry_run: bool, verbose: bool):
+def process_file(file_path: Path, detail_level: DetailLevel, dry_run: bool, verbose: bool):
     """
     Process a single file through the documentation pipeline.
 
@@ -140,8 +150,8 @@ def process_file(file_path: Path, suffix: str, dry_run: bool, verbose: bool):
     ----------
     file_path : Path
         Path to the file to process
-    suffix : str
-        Suffix to add to output filename
+    detail_level : DetailLevel
+        Level of documentation detail (minimal, concise, or verbose)
     dry_run : bool
         If True, show what would be done without making changes
     verbose : bool
@@ -200,17 +210,17 @@ def process_file(file_path: Path, suffix: str, dry_run: bool, verbose: bool):
     try:
         if existing_doc and not validator.validate(file_path, existing_doc).is_valid:
             # Update existing documentation
-            new_doc = generator.update(file_path, existing_doc, content)
+            new_doc = generator.update(file_path, existing_doc, content, detail_level)
         else:
             # Generate new documentation
-            new_doc = generator.generate(file_path, content)
+            new_doc = generator.generate(file_path, content, detail_level)
 
-        # Step 4: Write modified file
+        # Step 4: Inject documentation into original file
         if verbose:
-            console.print("  [dim]Writing documented file...[/dim]")
+            console.print("  [dim]Injecting documentation into file...[/dim]")
 
-        output_path = writer.write(file_path, new_doc, suffix)
-        console.print(f"  [green]✓ Documentation generated → {output_path.name}[/green]")
+        writer.inject_documentation(file_path, new_doc)
+        console.print(f"  [green]✓ Documentation injected into {file_path.name}[/green]")
 
     except DocGeneratorError as e:
         raise Exception(f"Generation failed: {e}")

@@ -52,12 +52,14 @@ class TestDocGeneratorInitialization:
             assert generator.model == "claude-3-5-sonnet-20241022"
 
     def test_init_creates_prompts(self):
-        """Test initialization creates language-specific prompts."""
+        """Test initialization creates language-specific prompt methods."""
         with patch('docugen.core.doc_generator.Anthropic'):
             generator = DocGenerator(api_key="test-key")
-            assert 'sql' in generator._prompts
-            assert 'python' in generator._prompts
-            assert 'r' in generator._prompts
+            # Test that prompt methods exist and return strings
+            from docugen.utils.config import DetailLevel
+            assert isinstance(generator._get_sql_prompt(DetailLevel.CONCISE), str)
+            assert isinstance(generator._get_python_prompt(DetailLevel.CONCISE), str)
+            assert isinstance(generator._get_r_prompt(DetailLevel.CONCISE), str)
 
 
 class TestDocGeneratorLanguageDetection:
@@ -113,9 +115,10 @@ class TestDocGeneratorPrompts:
 
     def test_sql_prompt_structure(self, generator):
         """Test SQL prompt has required structure."""
-        prompt = generator._get_sql_prompt()
+        from docugen.utils.config import DetailLevel
+        prompt = generator._get_sql_prompt(DetailLevel.CONCISE)
         assert "SQL" in prompt or "sql" in prompt
-        assert "markdown" in prompt.lower()
+        assert "documentation" in prompt.lower()
         assert "-- #" in prompt
         assert "## Description" in prompt
         assert "## Parameters" in prompt
@@ -299,7 +302,7 @@ class TestDocGeneratorGenerate:
         generator.generate(Path("test.sql"), "SELECT 1;")
         call_args = generator.client.messages.create.call_args
         prompt = call_args[1]['messages'][0]['content']
-        assert "markdown" in prompt.lower()
+        assert "documentation" in prompt.lower()
 
     def test_generate_with_correct_parameters(self, generator):
         """Test that generate calls API with correct parameters."""

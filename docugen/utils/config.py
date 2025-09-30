@@ -5,7 +5,26 @@ Configuration management.
 import os
 from pathlib import Path
 from typing import Optional
+from enum import Enum
 import yaml
+
+
+class DetailLevel(Enum):
+    """
+    Documentation detail level.
+
+    Attributes
+    ----------
+    MINIMAL : str
+        Brief documentation with essential information only.
+    CONCISE : str
+        Balanced documentation with key details (default).
+    VERBOSE : str
+        Comprehensive documentation with examples and detailed explanations.
+    """
+    MINIMAL = "minimal"
+    CONCISE = "concise"
+    VERBOSE = "verbose"
 
 
 class Config:

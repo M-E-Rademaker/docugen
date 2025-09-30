@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional
 from anthropic import Anthropic, APIError, APIConnectionError, RateLimitError
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from docugen.utils.config import DetailLevel
 
 
 class DocGeneratorError(Exception):
@@ -75,13 +76,6 @@ class DocGenerator:
         self.console = Console()
         self.model = "claude-3-5-sonnet-20241022"
 
-        # Language-specific prompt templates
-        self._prompts = {
-            'sql': self._get_sql_prompt(),
-            'python': self._get_python_prompt(),
-            'r': self._get_r_prompt()
-        }
-
     def _get_file_language(self, file_path: Path) -> str:
         """
         Determine language from file extension.
@@ -116,18 +110,104 @@ class DocGenerator:
 
         return mapping[suffix]
 
-    def _get_sql_prompt(self) -> str:
+    def _get_sql_prompt(self, detail_level: DetailLevel = DetailLevel.CONCISE) -> str:
         """
         Get prompt template for SQL documentation generation.
+
+        Parameters
+        ----------
+        detail_level : DetailLevel
+            Level of documentation detail (minimal, concise, or verbose).
 
         Returns
         -------
         str
             Prompt template for SQL markdown-style comments.
         """
-        return """You are a technical documentation expert specializing in SQL.
+        if detail_level == DetailLevel.MINIMAL:
+            return """You are a technical documentation expert specializing in SQL.
 
-Generate comprehensive, markdown-style documentation comments for the SQL code provided.
+Generate MINIMAL, brief documentation comments for the SQL code provided.
+
+REQUIREMENTS:
+1. Use SQL comment syntax (-- for each line)
+2. Follow this structure:
+   -- # [Function/Query Name]
+   -- [One-line description of what it does]
+   -- Parameters: [param1 (TYPE), param2 (TYPE)]
+   -- Returns: [TYPE - brief description]
+
+3. Keep it EXTREMELY brief - 2-4 lines maximum
+4. Focus only on essential information
+5. NO examples, NO extended descriptions
+
+CODE TO DOCUMENT:
+{code}
+
+Return ONLY the minimal documentation comments (starting with --), ready to be inserted directly before the code."""
+
+        elif detail_level == DetailLevel.VERBOSE:
+            return """You are a technical documentation expert specializing in SQL.
+
+Generate COMPREHENSIVE, detailed documentation comments for the SQL code provided.
+
+REQUIREMENTS:
+1. Use SQL comment syntax (-- for each line)
+2. Follow this exact structure:
+   -- # [Function/Query Name]
+   --
+   -- ## Description
+   -- [Detailed, thorough description of what the query/function does]
+   -- [Include purpose, use cases, and important behavior notes]
+   --
+   -- ## Parameters
+   -- - `parameter_name` (TYPE): Detailed description of parameter,
+   --   including constraints, expected values, and default behavior
+   --
+   -- ## Returns
+   -- - TYPE: Detailed description of return value/result set,
+   --   including structure, possible values, and edge cases
+   --
+   -- ## Side Effects
+   -- - List any INSERT, UPDATE, DELETE operations
+   -- - Note any transaction requirements
+   --
+   -- ## Performance Considerations
+   -- - Index usage, query complexity notes
+   --
+   -- ## Examples
+   -- ```sql
+   -- -- Example 1: Basic usage
+   -- [Usage example with output]
+   --
+   -- -- Example 2: Edge case
+   -- [Another example]
+   -- ```
+   --
+   -- ## Notes
+   -- - Additional important information
+   -- - Edge cases and gotchas
+
+3. Be thorough and detailed about:
+   - What the query does and why
+   - All input parameters and their types
+   - Return types and structure
+   - Side effects and performance notes
+   - Multiple realistic examples
+
+4. Use professional, clear language
+5. Include 2-3 realistic usage examples
+6. Explain edge cases and important details
+
+CODE TO DOCUMENT:
+{code}
+
+Return ONLY the comprehensive documentation comments (starting with --), ready to be inserted directly before the code."""
+
+        else:  # CONCISE (default)
+            return """You are a technical documentation expert specializing in SQL.
+
+Generate concise, balanced documentation comments for the SQL code provided.
 
 REQUIREMENTS:
 1. Use SQL comment syntax (-- for each line)
@@ -163,18 +243,129 @@ CODE TO DOCUMENT:
 
 Return ONLY the documentation comments (starting with --), ready to be inserted directly before the code."""
 
-    def _get_python_prompt(self) -> str:
+    def _get_python_prompt(self, detail_level: DetailLevel = DetailLevel.CONCISE) -> str:
         """
         Get prompt template for Python documentation generation.
+
+        Parameters
+        ----------
+        detail_level : DetailLevel
+            Level of documentation detail (minimal, concise, or verbose).
 
         Returns
         -------
         str
             Prompt template for NumPy-style docstrings.
         """
-        return '''You are a technical documentation expert specializing in Python.
+        if detail_level == DetailLevel.MINIMAL:
+            return '''You are a technical documentation expert specializing in Python.
 
-Generate comprehensive NumPy/SciPy-style docstrings for the Python code provided.
+Generate MINIMAL, brief docstrings for the Python code provided.
+
+REQUIREMENTS:
+1. Use triple-quoted docstring format
+2. Keep it to 1-3 lines maximum:
+   """
+   Brief description of what the function does.
+   """
+
+3. NO parameter lists, NO return type details, NO examples
+4. Just the essential purpose in one sentence
+5. Be accurate but extremely concise
+
+CODE TO DOCUMENT:
+{code}
+
+Return ONLY the minimal docstring content (the text between the triple quotes), ready to be placed as a function/class docstring.'''
+
+        elif detail_level == DetailLevel.VERBOSE:
+            return '''You are a technical documentation expert specializing in Python.
+
+Generate COMPREHENSIVE, detailed NumPy/SciPy-style docstrings for the Python code provided.
+
+REQUIREMENTS:
+1. Use triple-quoted docstring format
+2. Follow NumPy docstring standard with ALL sections:
+   """
+   Short one-line description.
+
+   Detailed extended description explaining the function's purpose,
+   behavior, implementation details, and any important notes.
+   Include algorithm details, complexity notes, and usage guidance.
+
+   Parameters
+   ----------
+   param_name : type
+       Comprehensive description of parameter, including valid values,
+       constraints, default behavior, and any special considerations.
+       Use 4-space indentation for continuation lines.
+   another_param : type, optional
+       Detailed description. Include 'optional' and explain default.
+
+   Returns
+   -------
+   return_type
+       Detailed description of return value. Specify exact type,
+       structure, possible values, and edge cases.
+
+   Raises
+   ------
+   ExceptionType
+       Detailed explanation of when and why this exception is raised,
+       including specific conditions and error handling guidance.
+   AnotherException
+       Description of another possible exception.
+
+   See Also
+   --------
+   related_function : Brief description of relationship.
+
+   Notes
+   -----
+   Additional important information, algorithm details, complexity,
+   edge cases, gotchas, and implementation considerations.
+
+   Examples
+   --------
+   >>> # Example 1: Basic usage
+   >>> result = function_name(arg1, arg2)
+   >>> print(result)
+   expected_output
+
+   >>> # Example 2: Edge case
+   >>> result = function_name(special_arg)
+   >>> print(result)
+   special_output
+
+   >>> # Example 3: Error handling
+   >>> try:
+   ...     function_name(invalid_arg)
+   ... except ValueError as e:
+   ...     print(e)
+   error_message
+   """
+
+3. Be thorough and detailed about:
+   - Parameter types with exact type hints
+   - All return types and structures
+   - All possible exceptions
+   - Multiple realistic, executable examples (3+)
+   - Algorithm and complexity notes
+   - Edge cases and gotchas
+
+4. Include 3+ realistic, runnable examples covering different scenarios
+5. Use proper indentation (4 spaces)
+6. Explain edge cases and error conditions
+
+CODE TO DOCUMENT:
+{code}
+
+Return ONLY the comprehensive docstring content (the text between the triple quotes, including proper formatting), ready to be placed as a function/class docstring.'''
+
+        else:  # CONCISE (default)
+            return '''You are a technical documentation expert specializing in Python.
+
+Generate concise, balanced NumPy/SciPy-style docstrings for the Python code provided.
 
 REQUIREMENTS:
 1. Use triple-quoted docstring format
@@ -224,18 +415,106 @@ CODE TO DOCUMENT:
 
 Return ONLY the docstring content (the text between the triple quotes, including proper formatting), ready to be placed as a function/class docstring.'''
 
-    def _get_r_prompt(self) -> str:
+    def _get_r_prompt(self, detail_level: DetailLevel = DetailLevel.CONCISE) -> str:
         """
         Get prompt template for R documentation generation.
+
+        Parameters
+        ----------
+        detail_level : DetailLevel
+            Level of documentation detail (minimal, concise, or verbose).
 
         Returns
         -------
         str
             Prompt template for Roxygen2-style documentation.
         """
-        return """You are a technical documentation expert specializing in R.
+        if detail_level == DetailLevel.MINIMAL:
+            return """You are a technical documentation expert specializing in R.
 
-Generate comprehensive Roxygen2 documentation for the R code provided.
+Generate MINIMAL, brief Roxygen2 documentation for the R code provided.
+
+REQUIREMENTS:
+1. Use Roxygen2 comment syntax (#' for each line)
+2. Keep it to 2-3 lines maximum:
+   #' Brief one-line description of function
+   #' @export
+
+3. NO parameter descriptions, NO return details, NO examples
+4. Just the essential purpose and @export if applicable
+5. Be accurate but extremely concise
+
+CODE TO DOCUMENT:
+{code}
+
+Return ONLY the minimal Roxygen2 comments (starting with #'), ready to be inserted directly before the function definition."""
+
+        elif detail_level == DetailLevel.VERBOSE:
+            return """You are a technical documentation expert specializing in R.
+
+Generate COMPREHENSIVE, detailed Roxygen2 documentation for the R code provided.
+
+REQUIREMENTS:
+1. Use Roxygen2 comment syntax (#' for each line)
+2. Follow this detailed structure:
+   #' Short title (one line)
+   #'
+   #' Comprehensive detailed description explaining what the function does,
+   #' its purpose, use cases, algorithm details, and any important behavior.
+   #' Include implementation notes, complexity considerations, and usage guidance.
+   #'
+   #' @param param_name Detailed description of parameter including type,
+   #'   valid values, constraints, default behavior, and any special
+   #'   considerations. Use proper indentation for continuation lines (2 spaces).
+   #' @param another_param Comprehensive description of another parameter.
+   #' @return Detailed description of return value, including exact type,
+   #'   structure, possible values, edge cases, and any important notes about
+   #'   the return behavior.
+   #' @details
+   #' Additional comprehensive details about the implementation, algorithm,
+   #' complexity, performance considerations, and important usage notes.
+   #' @section Performance:
+   #' Notes about performance characteristics and complexity.
+   #' @section Edge Cases:
+   #' Description of edge cases and special behavior.
+   #' @examples
+   #' # Example 1: Basic usage
+   #' result <- function_name(arg1, arg2)
+   #' print(result)
+   #'
+   #' # Example 2: Advanced usage with edge case
+   #' result2 <- function_name(special_arg)
+   #' print(result2)
+   #'
+   #' # Example 3: Error handling
+   #' tryCatch(
+   #'   function_name(invalid_arg),
+   #'   error = function(e) print(e)
+   #' )
+   #' @seealso \\code{\\link{related_function}} for related functionality.
+   #' @export
+
+3. Be thorough and detailed about:
+   - Parameter types, constraints, and valid values
+   - Return value type, structure, and edge cases
+   - Implementation details and complexity
+   - Multiple realistic, executable examples (3+)
+   - Edge cases and gotchas
+   - When to use @export
+
+4. Include 3+ realistic, executable examples covering different scenarios
+5. Use clear, comprehensive descriptions
+6. Follow R community conventions and best practices
+
+CODE TO DOCUMENT:
+{code}
+
+Return ONLY the comprehensive Roxygen2 comments (starting with #'), ready to be inserted directly before the function definition."""
+
+        else:  # CONCISE (default)
+            return """You are a technical documentation expert specializing in R.
+
+Generate concise, balanced Roxygen2 documentation for the R code provided.
 
 REQUIREMENTS:
 1. Use Roxygen2 comment syntax (#' for each line)
@@ -270,7 +549,8 @@ CODE TO DOCUMENT:
 
 Return ONLY the Roxygen2 comments (starting with #'), ready to be inserted directly before the function definition."""
 
-    def generate(self, file_path: Path, code_content: str) -> str:
+    def generate(self, file_path: Path, code_content: str,
+                 detail_level: DetailLevel = DetailLevel.CONCISE) -> str:
         """
         Generate documentation for code file.
 
@@ -280,6 +560,9 @@ Return ONLY the Roxygen2 comments (starting with #'), ready to be inserted direc
             Path to the file being documented.
         code_content : str
             Content of the code file.
+        detail_level : DetailLevel, optional
+            Level of documentation detail (minimal, concise, or verbose).
+            Default is CONCISE.
 
         Returns
         -------
@@ -296,7 +579,15 @@ Return ONLY the Roxygen2 comments (starting with #'), ready to be inserted direc
             If API rate limit is exceeded.
         """
         language = self._get_file_language(file_path)
-        prompt_template = self._prompts[language]
+
+        # Get the appropriate prompt for language and detail level
+        if language == 'sql':
+            prompt_template = self._get_sql_prompt(detail_level)
+        elif language == 'python':
+            prompt_template = self._get_python_prompt(detail_level)
+        else:  # r
+            prompt_template = self._get_r_prompt(detail_level)
+
         prompt = prompt_template.format(code=code_content)
 
         try:
@@ -346,7 +637,7 @@ Return ONLY the Roxygen2 comments (starting with #'), ready to be inserted direc
             )
 
     def update(self, file_path: Path, existing_doc: Dict[str, Any],
-               code_content: str) -> str:
+               code_content: str, detail_level: DetailLevel = DetailLevel.CONCISE) -> str:
         """
         Update existing documentation to be compliant.
 
@@ -363,6 +654,9 @@ Return ONLY the Roxygen2 comments (starting with #'), ready to be inserted direc
             like 'content', 'type', etc.
         code_content : str
             Content of the code file.
+        detail_level : DetailLevel, optional
+            Level of documentation detail (minimal, concise, or verbose).
+            Default is CONCISE.
 
         Returns
         -------
@@ -379,7 +673,14 @@ Return ONLY the Roxygen2 comments (starting with #'), ready to be inserted direc
             If API rate limit is exceeded.
         """
         language = self._get_file_language(file_path)
-        base_prompt = self._prompts[language]
+
+        # Get the appropriate prompt for language and detail level
+        if language == 'sql':
+            base_prompt = self._get_sql_prompt(detail_level)
+        elif language == 'python':
+            base_prompt = self._get_python_prompt(detail_level)
+        else:  # r
+            base_prompt = self._get_r_prompt(detail_level)
 
         # Extract existing doc content
         existing_content = existing_doc.get('content', '')
