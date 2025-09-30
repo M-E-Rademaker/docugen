@@ -1,19 +1,43 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 block_cipher = None
+
+# Collect all data and submodules for dependencies
+datas = []
+binaries = []
+hiddenimports = []
+
+for package in ['click', 'anthropic', 'rich', 'yaml', 'certifi', 'httpx', 'h11', 'sniffio', 'anyio']:
+    try:
+        pkg_datas, pkg_binaries, pkg_hiddenimports = collect_all(package)
+        datas += pkg_datas
+        binaries += pkg_binaries
+        hiddenimports += pkg_hiddenimports
+    except Exception:
+        pass
+
+# Add explicit hidden imports
+hiddenimports += [
+    'anthropic',
+    'anthropic.types',
+    'anthropic.resources',
+    'anthropic.lib',
+    'click',
+    'rich',
+    'rich.console',
+    'rich.markdown',
+    'rich.progress',
+    'yaml',
+    'pyyaml',
+]
 
 a = Analysis(
     ['docugen/cli.py'],
     pathex=[],
-    binaries=[],
-    datas=[],
-    hiddenimports=[
-        'anthropic',
-        'anthropic.types',
-        'anthropic.resources',
-        'click',
-        'rich',
-    ],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
