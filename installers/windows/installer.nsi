@@ -4,10 +4,6 @@
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
 
-; Constants for Windows messages
-!define HWND_BROADCAST 0xffff
-!define WM_WININICHANGE 0x001A
-
 ; Application Info
 !define APPNAME "DocuGen"
 !define COMPANYNAME "DocuGen"
