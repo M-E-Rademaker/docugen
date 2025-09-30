@@ -4,6 +4,10 @@
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
 
+; Constants for Windows messages
+!define HWND_BROADCAST 0xffff
+!define WM_WININICHANGE 0x001A
+
 ; Application Info
 !define APPNAME "DocuGen"
 !define COMPANYNAME "DocuGen"
@@ -96,9 +100,11 @@ Section "Install"
     ; Create uninstaller
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
-    ; Add to PATH
-    EnVar::SetHKLM
-    EnVar::AddValue "PATH" "$INSTDIR"
+    ; Add to PATH using registry
+    ReadRegStr $0 HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path"
+    StrCpy $0 "$0;$INSTDIR"
+    WriteRegExpandStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path" "$0"
+    SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 
     ; Registry information for Add/Remove Programs
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
@@ -148,8 +154,8 @@ SectionEnd
 ; Uninstaller Section
 Section "Uninstall"
     ; Remove from PATH
-    EnVar::SetHKLM
-    EnVar::DeleteValue "PATH" "$INSTDIR"
+    Push "$INSTDIR"
+    Call un.RemoveFromPath
 
     ; Remove files
     Delete "$INSTDIR\docugen.exe"
@@ -168,3 +174,71 @@ Section "Uninstall"
     RMDir /r "$APPDATA\DocuGen"
     SkipConfigRemoval:
 SectionEnd
+
+; Function to remove from PATH
+Function un.RemoveFromPath
+    Exch $0
+    Push $1
+    Push $2
+    Push $3
+
+    ReadRegStr $1 HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path"
+    StrCpy $2 $1 1 -1
+    StrCmp $2 ";" +2
+    StrCpy $1 "$1;"
+
+    Push $1
+    Push "$0;"
+    Call un.StrStr
+    Pop $2
+    StrCmp $2 "" done
+
+    StrLen $3 "$0;"
+    StrCpy $2 $1 -$3 $2
+    Push $2
+    Push $0
+    Call un.StrStr
+    Pop $2
+    StrLen $3 $0
+    StrCpy $1 $2 "" $3
+
+    StrCpy $2 $1 1 -1
+    StrCmp $2 ";" 0 +2
+    StrCpy $1 $1 -1
+
+    WriteRegExpandStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path" $1
+    SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
+
+    done:
+    Pop $3
+    Pop $2
+    Pop $1
+    Pop $0
+FunctionEnd
+
+Function un.StrStr
+    Exch $1
+    Exch
+    Exch $2
+    Push $3
+    Push $4
+    Push $5
+
+    StrLen $3 $1
+    StrCpy $4 0
+
+    loop:
+    StrCpy $5 $2 $3 $4
+    StrCmp $5 $1 done
+    StrCmp $5 "" done
+    IntOp $4 $4 + 1
+    Goto loop
+
+    done:
+    StrCpy $1 $2 "" $4
+    Pop $5
+    Pop $4
+    Pop $3
+    Pop $2
+    Exch $1
+FunctionEnd
