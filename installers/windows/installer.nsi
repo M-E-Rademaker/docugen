@@ -17,7 +17,6 @@
 
 ; Installer properties
 Name "${APPNAME}"
-Icon "docugen.ico"
 OutFile "DocuGen-Setup-v${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"
 InstallDir "$PROGRAMFILES64\${APPNAME}"
 InstallDirRegKey HKLM "Software\${APPNAME}" "InstallLocation"
@@ -25,11 +24,6 @@ RequestExecutionLevel admin
 
 ; Modern UI Configuration
 !define MUI_ABORTWARNING
-!define MUI_ICON "docugen.ico"
-!define MUI_UNICON "docugen.ico"
-!define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP "header.bmp"
-!define MUI_WELCOMEFINISHPAGE_BITMAP "welcome.bmp"
 
 ; Pages
 !insertmacro MUI_PAGE_WELCOME

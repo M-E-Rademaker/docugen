@@ -84,13 +84,6 @@ jobs:
       - name: Install NSIS
         run: |
           choco install nsis -y
-          refreshenv
-
-      - name: Create placeholder files for NSIS
-        run: |
-          echo "" > installers/windows/docugen.ico
-          echo "" > installers/windows/header.bmp
-          echo "" > installers/windows/welcome.bmp
 
       - name: Build NSIS installer
         run: |
