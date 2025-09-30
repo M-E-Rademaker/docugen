@@ -1,9 +1,17 @@
 import os
 from setuptools import setup, find_packages
 
+# Read version from package
+def get_version():
+    with open("docugen/__init__.py") as f:
+        for line in f:
+            if line.startswith("__version__"):
+                return line.split('"')[1]
+    return "0.0.0"
+
 setup(
     name="docugen",
-    version="0.1.0",
+    version=get_version(),
     packages=find_packages(),
     include_package_data=True,
     install_requires=[

@@ -8,6 +8,7 @@ import click
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
+from docugen import __version__
 from docugen.core.file_discovery import FileDiscovery
 from docugen.core.doc_parser import DocParser
 from docugen.core.doc_validator import DocValidator
@@ -67,7 +68,7 @@ def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: st
 
     # Header
     console.print(Panel.fit(
-        "[bold blue]DocuGen CLI v0.1.0[/bold blue]\n"
+        f"[bold blue]DocuGen CLI v{__version__}[/bold blue]\n"
         "AI-Powered Code Documentation",
         border_style="blue"
     ))
