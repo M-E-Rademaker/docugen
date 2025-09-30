@@ -111,79 +111,103 @@ class FileWriter:
 
     def _inject_python_doc(self, content: str, documentation: str) -> str:
         """
-        Inject Python docstring into function/class definition.
+        Inject Python docstrings for ALL undocumented functions/classes.
+
+        CRITICAL: This method MUST preserve all code functionality.
+        It only adds/updates docstrings, never modifies actual code.
 
         Parameters
         ----------
         content : str
             Original file content
         documentation : str
-            Docstring to inject
+            Docstring content to inject (WITHOUT triple quotes)
 
         Returns
         -------
         str
-            Modified content with docstring injected
+            Modified content with docstrings injected
+
+        Raises
+        ------
+        ValueError
+            If file cannot be parsed or injection would corrupt code
         """
         try:
             tree = ast.parse(content)
-        except SyntaxError:
-            # If parsing fails, just add at the beginning
-            return f'"""\n{documentation}\n"""\n\n{content}'
+        except SyntaxError as e:
+            raise ValueError(f"Cannot parse Python file: {e}")
 
         lines = content.split('\n')
 
-        # Find the first function or class definition
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-                # Get the line number (0-indexed in list, 1-indexed in ast)
-                func_line = node.lineno - 1
+        # Find ALL functions and classes at module level
+        # Sort by line number in reverse to inject from bottom to top
+        # (avoids line number shifts during injection)
+        targets = []
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
+                existing_doc = ast.get_docstring(node)
+                targets.append({
+                    'node': node,
+                    'line': node.lineno - 1,  # 0-indexed
+                    'has_doc': existing_doc is not None,
+                    'name': node.name
+                })
 
-                # Check if docstring already exists
-                existing_docstring = ast.get_docstring(node)
-                if existing_docstring:
-                    # Find and remove existing docstring
-                    # Look for the docstring in the lines after the function definition
-                    for i in range(func_line + 1, len(lines)):
-                        stripped = lines[i].strip()
-                        if stripped.startswith('"""') or stripped.startswith("'''"):
-                            # Found docstring start
-                            quote_type = '"""' if stripped.startswith('"""') else "'''"
+        # Sort by line number descending (inject from bottom up)
+        targets.sort(key=lambda x: x['line'], reverse=True)
 
-                            # Check if single-line docstring
-                            if stripped.count(quote_type) >= 2:
-                                # Single-line docstring
-                                del lines[i]
-                                break
-                            else:
-                                # Multi-line docstring - find end
-                                start_line = i
-                                for j in range(i + 1, len(lines)):
-                                    if quote_type in lines[j]:
-                                        # Found end
-                                        del lines[start_line:j+1]
-                                        break
-                                break
-                        elif stripped and not stripped.startswith('#'):
-                            # No docstring found
+        # Process each target
+        for target in targets:
+            node = target['node']
+            func_line = target['line']
+
+            # Remove existing docstring if present
+            if target['has_doc']:
+                # Find the docstring location
+                for i in range(func_line + 1, len(lines)):
+                    stripped = lines[i].strip()
+                    if stripped.startswith('"""') or stripped.startswith("'''"):
+                        quote_type = '"""' if stripped.startswith('"""') else "'''"
+
+                        # Check if single-line docstring
+                        if stripped.endswith(quote_type) and len(stripped) > 6:
+                            del lines[i]
                             break
+                        else:
+                            # Multi-line docstring
+                            start = i
+                            for j in range(i + 1, len(lines)):
+                                if quote_type in lines[j]:
+                                    del lines[start:j+1]
+                                    break
+                            break
+                    elif stripped and not stripped.startswith('#'):
+                        # No docstring found (shouldn't happen if has_doc=True)
+                        break
 
-                # Insert new docstring after function definition
-                indent = ' ' * (node.col_offset + 4)  # Function body indent
-                docstring_lines = [
-                    f'{indent}"""',
-                    *[f'{indent}{line}' if line else indent.rstrip() for line in documentation.split('\n')],
-                    f'{indent}"""'
-                ]
+            # Insert new docstring
+            indent = ' ' * (node.col_offset + 4)  # Body indent
+            docstring_lines = [
+                f'{indent}"""',
+                *[f'{indent}{line}' if line else indent.rstrip() for line in documentation.split('\n')],
+                f'{indent}"""'
+            ]
 
-                # Insert after function definition line
-                insert_pos = func_line + 1
-                for line in reversed(docstring_lines):
-                    lines.insert(insert_pos, line)
+            # Insert after function/class definition line
+            insert_pos = func_line + 1
+            for line in reversed(docstring_lines):
+                lines.insert(insert_pos, line)
 
-                break
+        result = '\n'.join(lines)
 
-        return '\n'.join(lines)
+        # Validate: ensure result is still valid Python
+        try:
+            ast.parse(result)
+        except SyntaxError as e:
+            raise ValueError(f"Injection corrupted Python syntax: {e}")
+
+        return result
 
     def _inject_r_doc(self, content: str, documentation: str) -> str:
         """

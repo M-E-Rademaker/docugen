@@ -209,34 +209,37 @@ Return ONLY the comprehensive documentation comments (starting with --), ready t
 
 Generate concise, balanced documentation comments for the SQL code provided.
 
-REQUIREMENTS:
-1. Use SQL comment syntax (-- for each line)
-2. Follow this exact structure:
-   -- # [Function/Query Name]
-   --
-   -- ## Description
-   -- [Clear, concise description of what the query/function does]
-   --
-   -- ## Parameters
-   -- - `parameter_name` (TYPE): Description of parameter
-   --
-   -- ## Returns
-   -- - TYPE: Description of return value/result set
-   --
-   -- ## Example
-   -- ```sql
-   -- [Usage example]
-   -- ```
+CRITICAL REQUIREMENTS:
+1. Return ONLY the SQL comment lines (starting with --)
+2. Do NOT include ANY explanatory text, summaries, or meta-commentary
+3. Do NOT say things like "Here are the comments" or "I have documented..."
+4. Just return the raw comment lines ready to be inserted
 
-3. Be accurate and specific about:
-   - What the query does
-   - Input parameters and their types
-   - Return types and structure
-   - Any side effects (INSERT, UPDATE, DELETE operations)
+COMMENT FORMAT:
+-- # [Function/Query Name]
+--
+-- ## Description
+-- [Clear, concise description of what the query/function does]
+--
+-- ## Parameters
+-- - `parameter_name` (TYPE): Description of parameter
+--
+-- ## Returns
+-- - TYPE: Description of return value/result set
+--
+-- ## Example
+-- ```sql
+-- [Usage example]
+-- ```
 
-4. Use professional, clear language
-5. Include a realistic usage example
-6. Keep descriptions concise but complete
+ACCURACY REQUIREMENTS:
+- What the query does
+- Input parameters and their types
+- Return types and structure
+- Any side effects (INSERT, UPDATE, DELETE operations)
+- Use professional, clear language
+- Include a realistic usage example
+- Keep descriptions concise but complete
 
 CODE TO DOCUMENT:
 {code}
@@ -367,53 +370,54 @@ Return ONLY the comprehensive docstring content (the text between the triple quo
 
 Generate concise, balanced NumPy/SciPy-style docstrings for the Python code provided.
 
-REQUIREMENTS:
-1. Use triple-quoted docstring format
-2. Follow NumPy docstring standard exactly:
-   """
-   Short one-line description.
+CRITICAL REQUIREMENTS:
+1. Return ONLY the docstring content text (what goes between the triple quotes)
+2. Do NOT include the triple quotes themselves
+3. Do NOT include ANY explanatory text, summaries, or meta-commentary
+4. Do NOT say things like "Here is the documentation" or "I have documented..."
+5. Just return the raw docstring text ready to be inserted
 
-   Extended description (if needed) explaining the function's purpose,
-   behavior, and any important details.
+DOCSTRING FORMAT:
+Short one-line description.
 
-   Parameters
-   ----------
-   param_name : type
-       Description of parameter. Use 4-space indentation for
-       continuation lines.
-   another_param : type, optional
-       Description. Include 'optional' for optional parameters.
+Extended description (if needed) explaining the function's purpose,
+behavior, and any important details.
 
-   Returns
-   -------
-   return_type
-       Description of return value. Be specific about type and structure.
+Parameters
+----------
+param_name : type
+    Description of parameter. Use 4-space indentation for
+    continuation lines.
+another_param : type, optional
+    Description. Include 'optional' for optional parameters.
 
-   Raises
-   ------
-   ExceptionType
-       When and why this exception is raised.
+Returns
+-------
+return_type
+    Description of return value. Be specific about type and structure.
 
-   Examples
-   --------
-   >>> function_name(arg1, arg2)
-   expected_output
-   """
+Raises
+------
+ExceptionType
+    When and why this exception is raised.
 
-3. Be accurate about:
-   - Parameter types (use proper type hints syntax)
-   - Return types
-   - Exceptions that can be raised
-   - Default values for optional parameters
+Examples
+--------
+>>> function_name(arg1, arg2)
+expected_output
 
-4. Include realistic, runnable examples
-5. Use proper indentation (4 spaces)
-6. Keep examples concise but illustrative
+ACCURACY REQUIREMENTS:
+- Parameter types (use proper type hints syntax)
+- Return types
+- Exceptions that can be raised
+- Default values for optional parameters
+- Include realistic, runnable examples
+- Use proper indentation (4 spaces)
 
 CODE TO DOCUMENT:
 {code}
 
-Return ONLY the docstring content (the text between the triple quotes, including proper formatting), ready to be placed as a function/class docstring.'''
+Return ONLY the docstring text content (without triple quotes), ready to be placed inside triple quotes as a function/class docstring.'''
 
     def _get_r_prompt(self, detail_level: DetailLevel = DetailLevel.CONCISE) -> str:
         """
@@ -516,33 +520,36 @@ Return ONLY the comprehensive Roxygen2 comments (starting with #'), ready to be 
 
 Generate concise, balanced Roxygen2 documentation for the R code provided.
 
-REQUIREMENTS:
-1. Use Roxygen2 comment syntax (#' for each line)
-2. Follow this exact structure:
-   #' Short title (one line)
-   #'
-   #' Detailed description explaining what the function does,
-   #' its purpose, and any important behavior.
-   #'
-   #' @param param_name Description of parameter. Type information should
-   #'   be included in the description. Use proper indentation for
-   #'   continuation lines (2 spaces).
-   #' @param another_param Description of another parameter.
-   #' @return Description of return value, including type and structure.
-   #' @examples
-   #' # Example usage
-   #' result <- function_name(arg1, arg2)
-   #' print(result)
-   #' @export
+CRITICAL REQUIREMENTS:
+1. Return ONLY the Roxygen2 comment lines (starting with #')
+2. Do NOT include ANY explanatory text, summaries, or meta-commentary
+3. Do NOT say things like "Here is the documentation" or "I have documented..."
+4. Just return the raw Roxygen2 comment lines ready to be inserted
 
-3. Be accurate about:
-   - Parameter types and expected values
-   - Return value type and structure
-   - When to use @export (exported functions only)
+ROXYGEN2 FORMAT:
+#' Short title (one line)
+#'
+#' Detailed description explaining what the function does,
+#' its purpose, and any important behavior.
+#'
+#' @param param_name Description of parameter. Type information should
+#'   be included in the description. Use proper indentation for
+#'   continuation lines (2 spaces).
+#' @param another_param Description of another parameter.
+#' @return Description of return value, including type and structure.
+#' @examples
+#' # Example usage
+#' result <- function_name(arg1, arg2)
+#' print(result)
+#' @export
 
-4. Include realistic, executable examples
-5. Use clear, concise descriptions
-6. Follow R community conventions
+ACCURACY REQUIREMENTS:
+- Parameter types and expected values
+- Return value type and structure
+- When to use @export (exported functions only)
+- Include realistic, executable examples
+- Use clear, concise descriptions
+- Follow R community conventions
 
 CODE TO DOCUMENT:
 {code}

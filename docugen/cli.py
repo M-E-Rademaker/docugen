@@ -13,6 +13,7 @@ from docugen.core.doc_parser import DocParser
 from docugen.core.doc_validator import DocValidator
 from docugen.core.doc_generator import DocGenerator, APIKeyMissingError, DocGeneratorError
 from docugen.core.file_writer import FileWriter
+from docugen.core.doc_orchestrator import DocOrchestrator
 from docugen.utils.config import DetailLevel
 from docugen.utils.config_manager import ConfigManager
 
@@ -23,6 +24,7 @@ parser = None
 validator = None
 generator = None
 writer = None
+orchestrator = None
 
 
 @click.command()
@@ -58,7 +60,7 @@ def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: st
       Set ANTHROPIC_API_KEY environment variable:
         export ANTHROPIC_API_KEY='your-api-key-here'
     """
-    global parser, validator, generator, writer
+    global parser, validator, generator, writer, orchestrator
 
     # Convert detail_level string to enum
     detail_level_enum = DetailLevel(detail_level.lower())
@@ -104,6 +106,9 @@ def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: st
             console.print(f"\n{str(e)}")
             sys.exit(1)
 
+        # Initialize orchestrator
+        orchestrator = DocOrchestrator(generator, validator)
+
         # Phase 1: Discover files
         discovery = FileDiscovery()
         files = discovery.discover(Path(path))
@@ -114,14 +119,23 @@ def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: st
 
         console.print(f"[bold]Found {len(files)} file(s) to process[/bold]\n")
 
-        # Phase 2: Process each file
+        # Phase 2: Process each file using orchestrator
         success_count = 0
         error_count = 0
+        total_documented = 0
 
         for file_path in files:
+            console.print(f"[cyan]→ {file_path.name}[/cyan]")
             try:
-                process_file(file_path, detail_level_enum, dry_run, verbose)
-                success_count += 1
+                result = orchestrator.process_file(file_path, detail_level_enum, dry_run, verbose)
+
+                if result['success']:
+                    success_count += 1
+                    total_documented += result['items_documented']
+                else:
+                    error_count += 1
+                    console.print(f"  [red]✗ Error: {result.get('error', 'Unknown error')}[/red]")
+
             except Exception as e:
                 error_count += 1
                 console.print(f"  [red]✗ Error: {e}[/red]")
@@ -132,7 +146,8 @@ def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: st
         # Summary
         console.print()
         console.print("[bold]Summary:[/bold]")
-        console.print(f"  ✓ Success: {success_count}")
+        console.print(f"  Files processed: {success_count}")
+        console.print(f"  Items documented: {total_documented}")
         if error_count > 0:
             console.print(f"  ✗ Errors: {error_count}")
 
@@ -151,92 +166,6 @@ def main(path: str, detail_level: str, dry_run: bool, verbose: bool, api_key: st
             import traceback
             console.print(f"[dim]{traceback.format_exc()}[/dim]")
         sys.exit(1)
-
-
-def process_file(file_path: Path, detail_level: DetailLevel, dry_run: bool, verbose: bool):
-    """
-    Process a single file through the documentation pipeline.
-
-    Parameters
-    ----------
-    file_path : Path
-        Path to the file to process
-    detail_level : DetailLevel
-        Level of documentation detail (minimal, concise, or verbose)
-    dry_run : bool
-        If True, show what would be done without making changes
-    verbose : bool
-        If True, show detailed progress information
-    """
-    console.print(f"[cyan]→ {file_path.name}[/cyan]")
-
-    # Read file content
-    try:
-        content = file_path.read_text(encoding='utf-8')
-    except Exception as e:
-        raise Exception(f"Failed to read file: {e}")
-
-    # Step 1: Parse existing documentation
-    if verbose:
-        console.print("  [dim]Parsing existing documentation...[/dim]")
-
-    existing_doc = parser.parse(file_path)
-
-    if existing_doc and verbose:
-        console.print(f"  [dim]Found existing documentation for: {existing_doc.get('name', 'unknown')}[/dim]")
-
-    # Step 2: Validate documentation
-    if verbose:
-        console.print("  [dim]Validating against standards...[/dim]")
-
-    needs_generation = True
-    if existing_doc:
-        validation_result = validator.validate(file_path, existing_doc)
-        if validation_result.is_valid:
-            console.print("  [green]✓ Documentation is compliant[/green]")
-            if verbose:
-                console.print("  [dim]No changes needed[/dim]")
-            needs_generation = False
-        else:
-            console.print(f"  [yellow]⚠ Documentation needs improvement ({len(validation_result.issues)} issues)[/yellow]")
-            if verbose:
-                for issue in validation_result.issues[:3]:  # Show first 3 issues
-                    console.print(f"    [dim]- {issue}[/dim]")
-                if len(validation_result.issues) > 3:
-                    console.print(f"    [dim]... and {len(validation_result.issues) - 3} more[/dim]")
-    else:
-        console.print("  [yellow]⚠ No documentation found[/yellow]")
-
-    if not needs_generation:
-        return
-
-    # Step 3: Generate/update documentation
-    if dry_run:
-        console.print("  [yellow]○ Dry run - would generate documentation[/yellow]")
-        return
-
-    if verbose:
-        console.print("  [dim]Generating documentation with Claude...[/dim]")
-
-    try:
-        if existing_doc and not validator.validate(file_path, existing_doc).is_valid:
-            # Update existing documentation
-            new_doc = generator.update(file_path, existing_doc, content, detail_level)
-        else:
-            # Generate new documentation
-            new_doc = generator.generate(file_path, content, detail_level)
-
-        # Step 4: Inject documentation into original file
-        if verbose:
-            console.print("  [dim]Injecting documentation into file...[/dim]")
-
-        writer.inject_documentation(file_path, new_doc)
-        console.print(f"  [green]✓ Documentation injected into {file_path.name}[/green]")
-
-    except DocGeneratorError as e:
-        raise Exception(f"Generation failed: {e}")
-    except Exception as e:
-        raise Exception(f"Unexpected error: {e}")
 
 
 if __name__ == '__main__':
